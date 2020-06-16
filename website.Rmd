@@ -1,0 +1,113 @@
+---
+title: "African American Juneteenth"
+author: "André Calero Valdez"
+date: "`r Sys.Date()`"
+output:
+  rmdformats::material:
+    highlight: kate
+---
+
+
+```{r setup, echo=FALSE, cache=FALSE}
+library(knitr)
+library(rmdformats)
+
+## Global options
+options(max.print="75")
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE,
+	cache = TRUE,
+	comment = NA,
+	prompt = FALSE,
+	tidy = TRUE
+)
+opts_knit$set(width=75)
+```
+
+
+```{r setup2, echo=FALSE, cache=FALSE}
+library(tidyverse)
+
+
+slave_routes <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-16/slave_routes.csv')
+#african_names <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-06-16/african_names.csv')
+
+```
+
+
+# Einleitung
+
+The goal of this week's *TidyTuesday* is to share data related to just how widespread slavery was in the history of the United States (and the rest of the world), highlight the ongoing suppression and violence against **Black Lives** across hundreds of years and continuing into the present, and celebrate the end of slavery via Juneteenth (June 19th) which falls on Thursday of this week. While the Emancipation Proclamation was made law as of 1863-01-01, slave owners in the South - and specifically within Texas - still maintained slavery through 1865 when Union soldiers were able to enforce the law abolishing slavery in the region.
+
+## Datasets
+With the provided datasets we can piece together a grim picture of the kidnapping, forced transport, and enslavement of MILLIONS of African people into the Americas and throughout the world across hundreds of years. Additional focus is given across the data for those enslaved into British America or the United States of America itself from 1600-1865. The Black Past dataset adds additional details around the slow granting of various rights to African-Americans, post-slavery brutality, violence and racism, as well as celebrations of achievements across many different categories. The Census data highlights the total slave populations across the United States during the slavery era. This included children born into slavery or additional details around slaves who were not kidnapped and transported by ship.
+
+
+### The last dataset
+The last dataset, african_names.csv records a history of freed slaves. These slaves were mostly freed during ship transport, had their names and ages recorded and were returned to free ports. Please note that while the data is accurate as historical records can be, often the rescuers and the Africans did not speak the same language, so names and ages are approximate.
+
+The Guardian put together a detailed article with many graphs highlighting the widespread practice of slavery and subsequent post-slavery racism against Black people in the United States across 400 years (1619 to 2019).
+
+H/t to Sean Clements for pointing out the Slave Voyages database and for creating a small Shiny app using that data.
+
+Data source: [TidyTuesday](https://github.com/rfordatascience/tidytuesday/tree/master/data/2020/2020-06-16)
+
+
+# Daten
+
+## Slave Routes
+
+In Summe wurden `r slave_routes %>% count() %>% pull(n)` Routen in den Daten beschrieben.
+
+Die Zehn Häfen mit den meisten Transporten waren:
+```{r estimatetop20}
+sum_df <- slave_routes %>% 
+  filter(!is.na(n_slaves_arrived)) %>% 
+  group_by(port_origin, year_arrival) %>% 
+  summarise(n_slaves_arrived = sum(n_slaves_arrived, na.rm = T))
+
+
+sum_df %>% group_by(port_origin) %>% 
+  summarise(n_slaves_arrived = sum(n_slaves_arrived)) %>% 
+  arrange(desc(n_slaves_arrived)) %>% 
+  top_n(11) ->
+  top_origin_table
+  
+top_origin_table %>% 
+  pull(port_origin) %>% 
+  na.omit() -> top_origins
+
+library(DT)
+
+sum_df %>% na.omit() %>% select("Ursprungshafen" = port_origin, "Anzahl Deportierter Sklaven" = n_slaves_arrived, "Jahr der Ankunft" = year_arrival) %>% 
+  DT::datatable()
+```
+
+
+```{r visualisierung}
+sum_df %>% 
+  mutate(port_origin = ifelse(port_origin %in% top_origins, port_origin, "other")) %>% 
+  mutate(port_origin = fct_reorder(port_origin, n_slaves_arrived)) %>% 
+  ggplot() +
+  aes(x = year_arrival) +
+  aes(y = n_slaves_arrived) +
+  aes(fill = port_origin) +
+  geom_col() +
+  scale_fill_discrete() +
+  labs(fill = "") +
+  theme_minimal(base_size = 8) +
+  theme(legend.position="bottom") -> p
+
+
+library(plotly)
+
+ggplotly(p)
+
+```
+
+
+
+
+
